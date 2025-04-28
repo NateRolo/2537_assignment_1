@@ -8,7 +8,10 @@ const Joi = require('joi');
 const path = require('path');
 
 const app = express();
-const port = provess.env.PORT || 3000;
+const port = process.env.PORT || 3000;
+
+const saltRounds = 12;
+const lengthOfTimeout = 1 * 60 * 60 * 1000;
 
 const mongodb_host = process.env.MONGODB_HOST;
 const mongodb_user = process.env.MONGODB_USER;
@@ -71,8 +74,14 @@ app.use(session({
     }
 }));
 
-/* Routes */
+/* Joi schema */
+const signupSchema = Joi.object({
+    name: Joi.string().required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().required()
+});
 
+/* Routes */
 // Home page
 app.get('/', (req, res) => {
     res.send(`
@@ -103,7 +112,54 @@ app.get('/signup', (req, res) => {
 
 // Signup page (POST)
 app.post('/signup', async (req, res) => {
-    res.send('Signup POST route - to be Implemented');
+    const { name, email, password } = req.body;
+
+    // validate input with Joi
+    const validationResult = signupSchema.validate({ name, email, password });
+    if(validationResult.error) {
+        const errorMessage = validationResult.error.details.map(d => d.message).join('<br>');
+        return res.status(400).send(`
+            <h1>Signup Failed</h1>
+            <p>Invalid input: ${errorMessage}</p>
+            <a href="/signup">Try again</a>`
+        );
+    }
+
+    try {
+        // check if user exists
+        const existingUser = await db.collection(userCollection).findOne({email:email});
+        if(existingUser) {
+            return res.status(409).send(`
+                <h1>Signup Failed</h1>
+                <p>Email already registered.</p>
+                <a href="/signup">Try again</a> or <a href="/login">Login</a>`
+            );
+        }
+
+        // hash password
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        // Insert new user
+        const newUser = {
+            name: name,
+            email: email,
+            password: hashedPassword
+        };
+        const result = await db.collection(userCollection).insertOne(newUser);
+
+        req.session.authenticated = true;
+        req.session.name = name;
+        req.session.email = email;
+        req.session.userId = result.insertedId; 
+        req.session.cookie.maxAge = lengthOfTimeout;
+
+        console.log(`User createdL: ${name} (${email})`);
+        res.redirect('/members');
+
+    } catch(error) {
+        console.error("signup error: ", error);
+         res.status(500).send('<h1>Internal Server Error</h1><p>Something went wrong during signup. Please try again later.</p>');
+    }
 });
 
 // Login page (POST)
