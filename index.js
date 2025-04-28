@@ -71,3 +71,32 @@ app.use(session({
     }
 }));
 
+/* Routes */
+
+// Home page
+app.get('/', (req, res) => {
+    res.send(`
+        <h1>Home Page</h1>
+        ${req.session.authenticated ?
+            `<p>Hello, ${req.session.name}</p>
+             <a href="/members">Members Area</a><br>
+             <a href="/logout">Logout</a>` :
+            `<a href="/signup">Sign Up</a><br>
+             <a href="/login">Login</a>`
+        }
+    `);
+});
+
+// Signup page (GET)
+app.get('/signup', (req, res) => {
+    res.send(`
+        <h1>Sign Up</h1>
+        <form action="/signup" method="post">
+            <input name="name" type="text" placeholder="Name" required><br>
+            <input name="email" type="email" placeholder="Email" required><br>
+            <input name="password" type="password" placeholder="Password" required><br>
+            <button type="submit">Sign Up</button>
+        </form>
+        <p>Already have an account? <a href="/login">Log In</a></p>
+    `);
+});
