@@ -100,3 +100,9 @@ app.get('/signup', (req, res) => {
         <p>Already have an account? <a href="/login">Log In</a></p>
     `);
 });
+
+// Signup page (POST)
+app.post('/signup', async (req, res) => {
+    res.send('Signup POST route - to be Implemented');
+});
+
