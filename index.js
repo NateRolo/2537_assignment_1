@@ -17,3 +17,17 @@ const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
 
+if (!mongodb_host || !mongodb_user || !mongodb_password || !mongodb_database || !mongodb_session_secret || !node_session_secret) {
+    console.error("FATAL ERROR: Required environment variables are not set. Please check your .env file.");
+    process.exit(1); 
+}
+
+const { MongoClient, ServerApiVersion } = require('mongodb');
+const mongoUrl = `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_host}`; // Construct connection string
+const client = new MongoClient(mongoUrl, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+});
