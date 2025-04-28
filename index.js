@@ -54,8 +54,7 @@ connectToDb();
 
 /* Session setup */
 const mongoStore = MongoStore.create({
-    mongoUrl: mongoUrl,
-    mongoOptions: { useNewUrlParser: true, useUnifiedTopology: true },
+    client: client,
     dbName: mongodb_database,
     collectionName: 'sessions', 
     crypto: {
@@ -74,9 +73,13 @@ app.use(session({
     }
 }));
 
+/* Middleware */
+app.use(express.urlencoded({ extended: false })); 
+app.use(express.static(path.join(__dirname, 'public'))); 
+
 /* Joi schema */
 const signupSchema = Joi.object({
-    name: Joi.string().required(),
+    username: Joi.string().required(),
     email: Joi.string().email().required(),
     password: Joi.string().required()
 });
@@ -87,7 +90,7 @@ app.get('/', (req, res) => {
     res.send(`
         <h1>Home Page</h1>
         ${req.session.authenticated ?
-            `<p>Hello, ${req.session.name}</p>
+            `<p>Hello, ${req.session.username}</p>
              <a href="/members">Members Area</a><br>
              <a href="/logout">Logout</a>` :
             `<a href="/signup">Sign Up</a><br>
@@ -101,7 +104,7 @@ app.get('/signup', (req, res) => {
     res.send(`
         <h1>Sign Up</h1>
         <form action="/signup" method="post">
-            <input name="name" type="text" placeholder="Name" required><br>
+            <input name="username" type="text" placeholder="Username" required><br>
             <input name="email" type="email" placeholder="Email" required><br>
             <input name="password" type="password" placeholder="Password" required><br>
             <button type="submit">Sign Up</button>
@@ -112,10 +115,12 @@ app.get('/signup', (req, res) => {
 
 // Signup page (POST)
 app.post('/signup', async (req, res) => {
-    const { name, email, password } = req.body;
+    const username = req.body.username;
+    const email = req.body.email;
+    const password = req.body.password;
 
     // validate input with Joi
-    const validationResult = signupSchema.validate({ name, email, password });
+    const validationResult = signupSchema.validate({ username, email, password });
     if(validationResult.error) {
         const errorMessage = validationResult.error.details.map(d => d.message).join('<br>');
         return res.status(400).send(`
@@ -141,19 +146,19 @@ app.post('/signup', async (req, res) => {
 
         // Insert new user
         const newUser = {
-            name: name,
+            username: username,
             email: email,
             password: hashedPassword
         };
         const result = await db.collection(userCollection).insertOne(newUser);
 
         req.session.authenticated = true;
-        req.session.name = name;
+        req.session.username = username;
         req.session.email = email;
         req.session.userId = result.insertedId; 
         req.session.cookie.maxAge = lengthOfTimeout;
 
-        console.log(`User createdL: ${name} (${email})`);
+        console.log(`User created: ${username} (${email})`);
         res.redirect('/members');
 
     } catch(error) {
