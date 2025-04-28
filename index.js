@@ -49,3 +49,15 @@ async function connectToDb() {
 
 connectToDb();
 
+// Session Setup
+const mongoStore = MongoStore.create({
+    mongoUrl: mongoUrl,
+    mongoOptions: { useNewUrlParser: true, useUnifiedTopology: true },
+    dbName: mongodb_database,
+    collectionName: 'sessions', 
+    crypto: {
+        secret: mongodb_session_secret
+    },
+    ttl: 60 * 60 //session expires in 1 hour
+});
+
