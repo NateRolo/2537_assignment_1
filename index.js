@@ -84,6 +84,11 @@ const signupSchema = Joi.object({
     password: Joi.string().required()
 });
 
+const loginSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required()
+});
+
 /* Routes */
 // Home page
 app.get('/', (req, res) => {
@@ -169,8 +174,56 @@ app.post('/signup', async (req, res) => {
 
 // Login page (POST)
 app.post('/login', async (req, res) => {
-    // Placeholder: Validate input, find user, compare password, create session, redirect
-    res.send('Login POST route - To be implemented');
+    const { email, password } = req.body;
+
+    // Validate input using Joi
+    const validationResult = loginSchema.validate({ email, password });
+    if (validationResult.error) {
+        const errorMessage = validationResult.error.details.map(d => d.message).join('<br>');
+        return res.status(400).send(`
+            <h1>Login Failed</h1>
+            <p>Invalid input: ${errorMessage}</p>
+            <a href="/login">Try again</a>
+        `);
+    }
+
+    try {
+        // Find the user by email
+        const user = await db.collection(userCollection).findOne({ email: email });
+        if (!user) {
+            // User not found
+            return res.status(401).send(`
+                <h1>Login Failed</h1>
+                <p>Invalid email or password.</p> 
+                <a href="/login">Try again</a>
+            `); 
+        }
+
+        // Compare the provided password with the stored hash
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            // Passwords don't match
+            return res.status(401).send(`
+                <h1>Login Failed</h1>
+                <p>Invalid email or password.</p> 
+                <a href="/login">Try again</a>
+            `); 
+        }
+
+        // Password is correct, create session
+        req.session.authenticated = true;
+        req.session.username = user.username; 
+        req.session.email = user.email;
+        req.session.userId = user._id; 
+        req.session.cookie.maxAge = lengthOfTimeout; // Reset cookie timeout
+
+        console.log(`User logged in: ${user.username} (${user.email})`);
+        res.redirect('/members'); // Redirect to members area
+
+    } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).send('<h1>Internal Server Error</h1><p>Something went wrong during login. Please try again later.</p>');
+    }
 });
 
 // Members page
