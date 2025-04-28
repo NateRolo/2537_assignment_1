@@ -49,7 +49,7 @@ async function connectToDb() {
 
 connectToDb();
 
-// Session Setup
+/* Session setup */
 const mongoStore = MongoStore.create({
     mongoUrl: mongoUrl,
     mongoOptions: { useNewUrlParser: true, useUnifiedTopology: true },
@@ -58,6 +58,16 @@ const mongoStore = MongoStore.create({
     crypto: {
         secret: mongodb_session_secret
     },
-    ttl: 60 * 60 //session expires in 1 hour
+    ttl: 60 * 60 //session expires in 1 hour (seconds)
 });
+
+app.use(session({
+    secret: node_session_secret,
+    store: mongoStore,
+    saveUninitialized: false,
+    resave: false, 
+    cookie: {
+        maxAge: 1000 * 60 * 60 // Cookie expiry matches session TTL (1 hour in milliseconds)
+    }
+}));
 
