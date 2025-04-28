@@ -31,3 +31,21 @@ const client = new MongoClient(mongoUrl, {
       deprecationErrors: true,
     }
 });
+
+let db; 
+const userCollection = 'users'; 
+
+async function connectToDb() {
+    try {
+        await client.connect();
+        db = client.db(mongodb_database);
+        console.log("Successfully connected to MongoDB Atlas!");
+    } catch (err) {
+        console.error("Failed to connect to MongoDB", err);
+        // Exit if DB connection fails
+        process.exit(1); 
+    }
+}
+
+connectToDb();
+
