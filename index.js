@@ -106,3 +106,30 @@ app.post('/signup', async (req, res) => {
     res.send('Signup POST route - to be Implemented');
 });
 
+// Login page (POST)
+app.post('/login', async (req, res) => {
+    // Placeholder: Validate input, find user, compare password, create session, redirect
+    res.send('Login POST route - To be implemented');
+});
+
+// Members page
+app.get('/members', (req, res) => {
+    // Placeholder: Check session, display content or redirect
+    res.send('Members Area - To be implemented');
+});
+
+// Logout
+app.get('/logout', (req, res) => {
+    // Placeholder: Destroy session, redirect
+    res.send('Logout route - To be implemented');
+});
+
+// 404 Handler (Must be the last route)
+app.use((req, res) => {
+    res.status(404).send("404: Page not found");
+});
+
+// --- Start Server ---
+app.listen(port, () => {
+    console.log(`Server listening on http://localhost:${port}`);
+}); 
