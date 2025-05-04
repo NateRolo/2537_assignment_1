@@ -22,21 +22,21 @@ const node_session_secret = process.env.NODE_SESSION_SECRET;
 
 if (!mongodb_host || !mongodb_user || !mongodb_password || !mongodb_database || !mongodb_session_secret || !node_session_secret) {
     console.error("FATAL ERROR: Required environment variables are not set. Please check your .env file.");
-    process.exit(1); 
+    process.exit(1);
 }
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const mongoUrl = `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_host}`; // Construct connection string
 const client = new MongoClient(mongoUrl, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
     }
 });
 
-let db; 
-const userCollection = 'users'; 
+let db;
+const userCollection = 'users';
 
 async function connectToDb() {
     try {
@@ -46,7 +46,7 @@ async function connectToDb() {
     } catch (err) {
         console.error("Failed to connect to MongoDB", err);
         // Exit if DB connection fails
-        process.exit(1); 
+        process.exit(1);
     }
 }
 
@@ -56,7 +56,7 @@ connectToDb();
 const mongoStore = MongoStore.create({
     client: client,
     dbName: mongodb_database,
-    collectionName: 'sessions', 
+    collectionName: 'sessions',
     crypto: {
         secret: mongodb_session_secret
     },
@@ -67,19 +67,29 @@ app.use(session({
     secret: node_session_secret,
     store: mongoStore,
     saveUninitialized: false,
-    resave: false, 
+    resave: false,
     cookie: {
         maxAge: 1000 * 60 * 60 // Cookie expiry matches session TTL (1 hour in milliseconds)
     }
 }));
 
 /* Middleware */
-app.use(express.urlencoded({ extended: false })); 
-app.use(express.static(path.join(__dirname, 'public'))); 
+app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Middleware to check if user is authenticated
+const requireAuth = (req, res, next) => {
+    if (!req.session.authenticated) {
+        // If not authenticated, redirect to login page
+        return res.redirect('/login');
+    }
+    // If authenticated, proceed to the next middleware or route handler
+    next();
+};
 
 /* Joi schema */
 const signupSchema = Joi.object({
-    username: Joi.string().required(),
+    name: Joi.string().required(),
     email: Joi.string().email().required(),
     password: Joi.string().required()
 });
@@ -95,7 +105,7 @@ app.get('/', (req, res) => {
     res.send(`
         <h1>Home Page</h1>
         ${req.session.authenticated ?
-            `<p>Hello, ${req.session.username}</p>
+            `<h2>Hello, ${req.session.name}</h2>
              <a href="/members">Members Area</a><br>
              <a href="/logout">Logout</a>` :
             `<a href="/signup">Sign Up</a><br>
@@ -109,7 +119,7 @@ app.get('/signup', (req, res) => {
     res.send(`
         <h1>Sign Up</h1>
         <form action="/signup" method="post">
-            <input name="username" type="text" placeholder="Username" required><br>
+            <input name="name" type="text" placeholder="Name" required><br>
             <input name="email" type="email" placeholder="Email" required><br>
             <input name="password" type="password" placeholder="Password" required><br>
             <button type="submit">Sign Up</button>
@@ -120,13 +130,13 @@ app.get('/signup', (req, res) => {
 
 // Signup page (POST)
 app.post('/signup', async (req, res) => {
-    const username = req.body.username;
+    const name = req.body.name;
     const email = req.body.email;
     const password = req.body.password;
 
     // validate input with Joi
-    const validationResult = signupSchema.validate({ username, email, password });
-    if(validationResult.error) {
+    const validationResult = signupSchema.validate({ name, email, password });
+    if (validationResult.error) {
         const errorMessage = validationResult.error.details.map(d => d.message).join('<br>');
         return res.status(400).send(`
             <h1>Signup Failed</h1>
@@ -137,8 +147,8 @@ app.post('/signup', async (req, res) => {
 
     try {
         // check if user exists
-        const existingUser = await db.collection(userCollection).findOne({email:email});
-        if(existingUser) {
+        const existingUser = await db.collection(userCollection).findOne({ email: email });
+        if (existingUser) {
             return res.status(409).send(`
                 <h1>Signup Failed</h1>
                 <p>Email already registered.</p>
@@ -151,26 +161,38 @@ app.post('/signup', async (req, res) => {
 
         // Insert new user
         const newUser = {
-            username: username,
+            name: name,
             email: email,
             password: hashedPassword
         };
         const result = await db.collection(userCollection).insertOne(newUser);
 
         req.session.authenticated = true;
-        req.session.username = username;
+        req.session.name = name;
         req.session.email = email;
-        req.session.userId = result.insertedId; 
+        req.session.userId = result.insertedId;
         req.session.cookie.maxAge = lengthOfTimeout;
 
-        console.log(`User created: ${username} (${email})`);
+        console.log(`User created: ${name} (${email})`);
         res.redirect('/members');
 
-    } catch(error) {
+    } catch (error) {
         console.error("signup error: ", error);
-         res.status(500).send('<h1>Internal Server Error</h1><p>Something went wrong during signup. Please try again later.</p>');
+        res.status(500).send('<h1>Internal Server Error</h1><p>Something went wrong during signup. Please try again later.</p>');
     }
 });
+
+// Login page (GET)
+app.get('/login', async (req, res) => {
+    res.send(`<h1>Login</h1>
+        <form action="/login" method="post">
+            <input name="email" type="email" placeholder="Email" required><br>
+            <input name="password" type="password" placeholder="Password" required><br>
+            <button type="submit">Login</button>
+        </form>
+        <p>Need an account? <a href="/signup">Sign up</a></p>
+        `)
+})
 
 // Login page (POST)
 app.post('/login', async (req, res) => {
@@ -196,7 +218,7 @@ app.post('/login', async (req, res) => {
                 <h1>Login Failed</h1>
                 <p>Invalid email or password.</p> 
                 <a href="/login">Try again</a>
-            `); 
+            `);
         }
 
         // Compare the provided password with the stored hash
@@ -207,18 +229,18 @@ app.post('/login', async (req, res) => {
                 <h1>Login Failed</h1>
                 <p>Invalid email or password.</p> 
                 <a href="/login">Try again</a>
-            `); 
+            `);
         }
 
         // Password is correct, create session
         req.session.authenticated = true;
-        req.session.username = user.username; 
+        req.session.name = user.name;
         req.session.email = user.email;
-        req.session.userId = user._id; 
+        req.session.userId = user._id;
         req.session.cookie.maxAge = lengthOfTimeout; // Reset cookie timeout
 
-        console.log(`User logged in: ${user.username} (${user.email})`);
-        res.redirect('/members'); // Redirect to members area
+        console.log(`User logged in: ${user.name} (${user.email})`);
+        res.redirect('/'); // Redirect to home
 
     } catch (error) {
         console.error("Login error:", error);
@@ -227,15 +249,45 @@ app.post('/login', async (req, res) => {
 });
 
 // Members page
-app.get('/members', (req, res) => {
-    // Placeholder: Check session, display content or redirect
-    res.send('Members Area - To be implemented');
+app.get('/members', requireAuth, (req, res) => {
+    const dogImages = [
+        '/images/dog1.gif', 
+        '/images/dog3.gif', 
+        '/images/dog4.gif'  
+    ];
+
+    // Get the index for the current request, default to 0 if not set
+    let currentIndex = req.session.dogImageIndex || 0;
+
+    // Select the image for this response
+    const currentDogImage = dogImages[currentIndex];
+
+    // Calculate the index for the *next* request
+    let nextIndex = (currentIndex + 1) % dogImages.length;
+
+    // Store the next index in the session
+    req.session.dogImageIndex = nextIndex;
+
+    res.send(`
+        <h1>Members Area</h1>
+        <h2>Hello, ${req.session.name}</h2> 
+        <img src="${currentDogImage}" alt="Cycling Dog Image" style="max-width: 300px; display: block; margin-top: 10px;"><br>
+        <a href="/">Home</a><br>
+        <a href="/logout">Logout</a>
+    `);
 });
 
 // Logout
 app.get('/logout', (req, res) => {
-    // Placeholder: Destroy session, redirect
-    res.send('Logout route - To be implemented');
+    req.session.destroy((err) => {
+        if (err) {
+            console.error("Error destroying session:", err);
+            return res.status(500).send('Could not log out.');
+        }
+        // Session destroyed successfully
+        console.log('User logged out');
+        res.redirect('/'); // Redirect to home page
+    });
 });
 
 // 404 Handler (Must be the last route)
