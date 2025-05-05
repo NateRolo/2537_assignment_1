@@ -69,7 +69,7 @@ app.use(session({
     saveUninitialized: false,
     resave: false,
     cookie: {
-        maxAge: 1000 * 60 * 60 
+        maxAge: lengthOfTimeout
     }
 }));
 
@@ -291,7 +291,7 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// 404 Handler (Must be the last route)
+// 404 Handler 
 app.use((req, res) => {
     res.status(404).send("404: Page not found");
 });
