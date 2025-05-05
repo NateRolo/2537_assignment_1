@@ -26,7 +26,7 @@ if (!mongodb_host || !mongodb_user || !mongodb_password || !mongodb_database || 
 }
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
-const mongoUrl = `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_host}`; // Construct connection string
+const mongoUrl = `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_host}`; 
 const client = new MongoClient(mongoUrl, {
     serverApi: {
         version: ServerApiVersion.v1,
@@ -45,7 +45,6 @@ async function connectToDb() {
         console.log("Successfully connected to MongoDB Atlas!");
     } catch (err) {
         console.error("Failed to connect to MongoDB", err);
-        // Exit if DB connection fails
         process.exit(1);
     }
 }
@@ -69,7 +68,7 @@ app.use(session({
     saveUninitialized: false,
     resave: false,
     cookie: {
-        maxAge: 1000 * 60 * 60 // Cookie expiry matches session TTL (1 hour in milliseconds)
+        maxAge: 1000 * 60 * 60 
     }
 }));
 
