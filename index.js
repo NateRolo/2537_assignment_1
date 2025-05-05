@@ -6,6 +6,7 @@ const MongoStore = require('connect-mongo');
 const bcrypt = require('bcrypt');
 const Joi = require('joi');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -249,28 +250,29 @@ app.post('/login', async (req, res) => {
 
 // Members page
 app.get('/members', requireAuth, (req, res) => {
-    const dogImages = [
-        '/images/dog1.gif', 
-        '/images/dog3.gif', 
-        '/images/dog4.gif'  
-    ];
+    const imageDir = path.join(__dirname, 'public', 'images');
+    let imageUrl = '/images/placeholder.png'; // Default image if directory is empty or read fails
 
-    // Get the index for the current request, default to 0 if not set
-    let currentIndex = req.session.dogImageIndex || 0;
+    try {
+        const files = fs.readdirSync(imageDir);
+        const imageFiles = files.filter(file => /\.(gif|jpe?g|png|webp)$/i.test(file)); // Basic filter for image extensions
 
-    // Select the image for this response
-    const currentDogImage = dogImages[currentIndex];
-
-    // Calculate the index for the *next* request
-    let nextIndex = (currentIndex + 1) % dogImages.length;
-
-    // Store the next index in the session
-    req.session.dogImageIndex = nextIndex;
+        if (imageFiles.length > 0) {
+            const randomIndex = Math.floor(Math.random() * imageFiles.length);
+            const randomImage = imageFiles[randomIndex];
+            imageUrl = `/images/${randomImage}`;
+        } else {
+            console.warn("No image files found in", imageDir);
+        }
+    } catch (err) {
+        console.error("Error reading image directory:", err);
+        // Keep the default imageUrl or handle the error differently
+    }
 
     res.send(`
         <h1>Members Area</h1>
-        <h2>Hello, ${req.session.name}</h2> 
-        <img src="${currentDogImage}" alt="Cycling Dog Image" style="max-width: 300px; display: block; margin-top: 10px;"><br>
+        <h2>Hello, ${req.session.name}</h2>
+        <img src="${imageUrl}" alt="Random Dog Image" style="max-width: 300px; display: block; margin-top: 10px;"><br>
         <a href="/">Home</a><br>
         <a href="/logout">Logout</a>
     `);
