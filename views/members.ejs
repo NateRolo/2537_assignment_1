@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Members Area</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        img { max-width: 300px; display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <%- include("templates/header") %>
+
+    <h1 class="mb-4">Members Area</h1>
+
+    <div class="row">
+        <% for (let image of images) { %>
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="<%= image %>" class="card-img-top" alt="Member image">
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <%- include("templates/footer") %>
+</body>
+</html> 
