@@ -315,7 +315,7 @@ app.post('/admin/promote', requireAdmin, async (req, res) => {
     
     try {
         await db.collection(userCollection).updateOne(
-            { _id: userId },
+            { _id: new ObjectId(String(userId)) },
             { $set: { user_type: 'admin' } }
         );
         res.redirect('/admin');
@@ -334,8 +334,8 @@ app.post('/admin/demote', requireAdmin, async (req, res) => {
     
     try {
         await db.collection(userCollection).updateOne(
-            { _id: userId },
-            { $set: { user_type: 'user' } }
+            { _id: new ObjectId(String(userId)) },
+            { $set: { user_type: 'member' } }
         );
         res.redirect('/admin');
     } catch (error) {
