@@ -1,0 +1,18 @@
+<%- include("templates/header") %>
+
+<h1 class="mb-4">Admin Dashboard</h1>
+
+<div class="row">
+    <div class="col-12">
+        <h2>User Management</h2>
+        <div class="row">
+            <% for (let user of users) { %>
+                <div class="col-md-6 col-lg-4">
+                    <%- include("templates/user", { user: user }) %>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<%- include("templates/footer") %> 
