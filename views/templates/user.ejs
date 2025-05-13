@@ -1,0 +1,20 @@
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title"><%= user.name %></h5>
+        <p class="card-text">Email: <%= user.email %></p>
+        <p class="card-text">Type: <%= user.user_type || 'user' %></p>
+        <div class="btn-group">
+            <% if (user.user_type !== 'admin') { %>
+                <form action="/admin/promote" method="POST" class="d-inline">
+                    <input type="hidden" name="userId" value="<%= user._id %>">
+                    <button type="submit" class="btn btn-success">Promote to Admin</button>
+                </form>
+            <% } else { %>
+                <form action="/admin/demote" method="POST" class="d-inline">
+                    <input type="hidden" name="userId" value="<%= user._id %>">
+                    <button type="submit" class="btn btn-warning">Demote to User</button>
+                </form>
+            <% } %>
+        </div>
+    </div>
+</div> 
